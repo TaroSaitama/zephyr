@@ -189,6 +189,7 @@ static const char *nth_str(const char *buf, size_t len, size_t n)
 static int query_virtio_backend(const struct query_param *params, size_t param_num, domid_t *domid,
 				int *deviceid)
 {
+        printk("FUNC: query_virtio_backend\n");
 	char buf[65] = {0};
 	const size_t len = ARRAY_SIZE(buf) - 1;
 	const char *ptr_i, *ptr_j;
@@ -250,6 +251,7 @@ static int query_virtio_backend(const struct query_param *params, size_t param_n
 
 static uintptr_t query_irq(domid_t domid, int deviceid)
 {
+	printk("FUNC: query_irq\n");
 	char buf[65] = {0};
 	size_t len = ARRAY_SIZE(buf) - 1;
 	char *endptr;
@@ -345,6 +347,7 @@ static inline k_spinlock_key_t wait_for_chunk_ready(struct virtq_context *ctx,
 
 static void reset_queue(const struct device *dev, uint16_t queue_id)
 {
+	printk("FUNC: reset_queue\n");
 	const struct vhost_xen_mmio_config *config = dev->config;
 	struct vhost_xen_mmio_data *data = dev->data;
 	struct virtq_context *vq_ctx = &data->vq_ctx[queue_id];
@@ -386,6 +389,7 @@ static void reset_queue(const struct device *dev, uint16_t queue_id)
 static void setup_unmap_info(struct mapped_pages *pages, const struct vhost_buf *bufs,
 			     size_t bufs_len, const struct gnttab_map_grant_ref *map_ops)
 {
+        printk("FUNC: setup_unmap_info\n");	
 	size_t map_idx = 0;
 
 	for (size_t i = 0; i < bufs_len; i++) {
@@ -413,6 +417,7 @@ static void setup_unmap_info(struct mapped_pages *pages, const struct vhost_buf 
 static int setup_iovec_mappings(struct mapped_pages *pages, domid_t domid,
 				const struct vhost_buf *bufs, size_t bufs_len)
 {
+        printk("FUNC: setup_iovec_mappings\n");	
 	size_t total_map_ops = 0;
 	size_t map_idx = 0;
 	int ret = 0;
@@ -499,6 +504,7 @@ static int init_pages_chunks(const struct device *dev, uint16_t queue_id, uint16
 			     struct vhost_iovec *w_iovecs, size_t w_iovecs_len, size_t *r_count_out,
 			     size_t *w_count_out, size_t total_pages)
 {
+	printk("FUNC: init_pages_chunks\n");
 	struct vhost_xen_mmio_data *data = dev->data;
 	struct virtq_context *vq_ctx = &data->vq_ctx[queue_id];
 	struct mapped_pages_chunk *chunk = &vq_ctx->pages_chunks[head];
@@ -622,6 +628,7 @@ static int init_pages_chunks(const struct device *dev, uint16_t queue_id, uint16
  */
 static int setup_queue(const struct device *dev, uint16_t queue_id)
 {
+	printk("FUNC: setup_queue\n");
 	const struct vhost_xen_mmio_config *config = dev->config;
 	struct vhost_xen_mmio_data *data = dev->data;
 	struct virtq_context *vq_ctx = &data->vq_ctx[queue_id];
@@ -675,6 +682,7 @@ static int setup_queue(const struct device *dev, uint16_t queue_id)
 
 static void reset_device(const struct device *dev)
 {
+        printk("FUNC: rest_device\n");
 	const struct vhost_xen_mmio_config *config = dev->config;
 	struct vhost_xen_mmio_data *data = dev->data;
 
@@ -698,19 +706,25 @@ static void ioreq_server_read_req(const struct device *dev, struct ioreq *r)
 
 	LOG_DBG("count %u: size: %u vp_eport: %u state: %d df: %d type: %d", r->count, r->size,
 		r->vp_eport, r->state, r->df, r->type);
+	printk("--------------------------\n");
+	printk("--------------------------\n");
 
 	switch (addr_offset) {
 	case VIRTIO_MMIO_MAGIC_VALUE: {
 		r->data = VIRTIO_MMIO_MAGIC;
+		printk("R VIRTIO_MMIO_MAGIC_VALUE\n    ioreq->data: %lld\n", r->data);
 	} break;
 	case VIRTIO_MMIO_VERSION: {
 		r->data = VIRTIO_MMIO_SUPPORTED_VERSION;
+		printk("R VIRTIO_MMIO_VERSION\n    ioreq->data: %lld\n", r->data);
 	} break;
 	case VIRTIO_MMIO_DEVICE_ID: {
 		r->data = config->device_id;
+		printk("R VIRTIO_MMIO_DEVICE_ID\n    ioreq->data: %lld\n", r->data);
 	} break;
 	case VIRTIO_MMIO_VENDOR_ID: {
 		r->data = config->vendor_id;
+		printk("R VIRTIO_MMIO_VENDOR_ID\n    ioreq->data: %lld\n", r->data);
 	} break;
 	case VIRTIO_MMIO_DEVICE_FEATURES: {
 		if (data->be.device_features_sel == 0) {
@@ -720,6 +734,7 @@ static void ioreq_server_read_req(const struct device *dev, struct ioreq *r)
 		} else {
 			r->data = 0;
 		}
+		printk("R VIRTIO_MMIO_DEVICE_FEATURES\n    ioreq->data: %lld\n", r->data);
 	} break;
 	case VIRTIO_MMIO_DRIVER_FEATURES: {
 		if (data->be.driver_features_sel == 0) {
@@ -729,21 +744,37 @@ static void ioreq_server_read_req(const struct device *dev, struct ioreq *r)
 		} else {
 			r->data = 0;
 		}
+		printk("R VIRTIO_MMIO_DRIVER_FEATURES\n    ioreq->data: %lld\n", r->data);
 	} break;
 	case VIRTIO_MMIO_QUEUE_SIZE_MAX: {
 		r->data = config->queue_size_max;
+		printk("R VIRTIO_MMIO_QUEUE_SIZE_MAX\n    ioreq->data: %lld\n", r->data);
 	} break;
 	case VIRTIO_MMIO_STATUS: {
 		r->data = atomic_get(&data->be.status);
+		printk("R VIRTIO_MMIO_STATUS\n    ioreq->data: %lld\n", r->data);
 	} break;
 	case VIRTIO_MMIO_INTERRUPT_STATUS: {
 		r->data = atomic_clear(&data->be.irq_status);
+		printk("R VIRTIO_MMIO_INTERRUPT_STATUS\n    ioreq->data: %lld\n", r->data);
 	} break;
 	case VIRTIO_MMIO_QUEUE_READY: {
 		r->data = vhost_queue_ready(dev, atomic_get(&data->be.queue_sel));
+		printk("R VIRTIO_MMIO_QUEUE_READY\n    ioreq->data: %lld\n", r->data);
+	} break;
+	case VIRTIO_GPIO_CONFIG: {
+		printk("R VIRTIO_GPIO_CONFIG\n    addr_offset: %#lx\n", addr_offset);
+		printk("    r->data: %lld\n", r->data);
+		r->data = -1;	
+	} break;
+	case VIRTIO_MMIO_CONFIG: {
+		printk("R VIRTIO_MMIO_CONFIG\n    addr_offset: %#lx\n", addr_offset);
+		printk("    r->data: %lld\n", r->data);	
 	} break;
 	default: {
-		r->data = -1;
+		r->data = -1; 
+		printk("R default\n    ioreq->data: %lld\n", r->data);
+		printk("    addr_offset: %#lx\n", addr_offset);
 	} break;
 	}
 
@@ -757,19 +788,24 @@ static void ioreq_server_write_req(const struct device *dev, struct ioreq *r)
 	const size_t addr_offset = r->addr - data->fe.base;
 
 	LOG_DBG("w/%zx %" PRIx64, addr_offset, r->data);
-
+	printk("--------------------------\n");
+	printk("--------------------------\n");
 	switch (addr_offset) {
 	case VIRTIO_MMIO_DEVICE_FEATURES_SEL: {
+		printk("W IRTIO_MMIO_DEVICE_FEATURES_SEL\n    ioreq->data: %lld\n", r->data);
 		if (r->data == 0 || r->data == 1) {
 			data->be.device_features_sel = (uint8_t)r->data;
 		}
 	} break;
 	case VIRTIO_MMIO_DRIVER_FEATURES_SEL: {
+	        printk("W VIRTIO_MMIO_DRIVER_FEATURES_SEL\n    ioreq->data: %lld\n", r->data);
+
 		if (r->data == 0 || r->data == 1) {
 			data->be.driver_features_sel = (uint8_t)r->data;
 		}
 	} break;
 	case VIRTIO_MMIO_DRIVER_FEATURES: {
+	        printk("W VIRTIO_MMIO_DRIVER_FEATURES\n    ioreq->data: %lld\n", r->data);
 		if (data->be.driver_features_sel == 0) {
 			uint64_t *drvfeats = &data->be.driver_features;
 
@@ -781,11 +817,13 @@ static void ioreq_server_write_req(const struct device *dev, struct ioreq *r)
 		}
 	} break;
 	case VIRTIO_MMIO_INTERRUPT_ACK: {
+	        printk("W VIRTIO_MMIO_INTERRUPT_ACK\n    ioreq->data: %lld\n", r->data);
 		if (r->data) {
 			atomic_and(&data->be.irq_status, ~r->data);
 		}
 	} break;
 	case VIRTIO_MMIO_STATUS: {
+	        printk("W VIRTIO_MMIO_STATUS\n    ioreq->data: %lld\n", r->data);
 		if (r->data & BIT(DEVICE_STATUS_FEATURES_OK)) {
 			const bool ok = !(data->be.driver_features & ~config->device_features);
 
@@ -810,6 +848,7 @@ static void ioreq_server_write_req(const struct device *dev, struct ioreq *r)
 	case VIRTIO_MMIO_QUEUE_AVAIL_HIGH:
 	case VIRTIO_MMIO_QUEUE_USED_LOW:
 	case VIRTIO_MMIO_QUEUE_USED_HIGH: {
+	        printk("W VIRTIO_MMIO_QUEUE_*\n    ioreq->data: %lld\n", r->data);
 		const uint16_t queue_id = atomic_get(&data->be.queue_sel);
 
 		if (queue_id < config->num_queues) {
@@ -822,12 +861,14 @@ static void ioreq_server_write_req(const struct device *dev, struct ioreq *r)
 		}
 	} break;
 	case VIRTIO_MMIO_QUEUE_NOTIFY: {
+	        printk("W VIRTIO_MMIO_QUEUE_NOTIFY\n    ioreq->data: %lld\n", r->data);
 		if (r->data < config->num_queues) {
 			atomic_set(&data->notify_queue_id, r->data);
 			k_work_schedule_for_queue(&data->workq, &data->isr_work, K_NO_WAIT);
 		}
 	} break;
 	case VIRTIO_MMIO_QUEUE_SIZE: {
+	        printk("W VIRTIO_MMIO_QUEUE_SIZE\n    ioreq->data: %lld\n", r->data);
 		const uint16_t queue_sel = atomic_get(&data->be.queue_sel);
 
 		if (queue_sel < config->num_queues) {
@@ -843,6 +884,7 @@ static void ioreq_server_write_req(const struct device *dev, struct ioreq *r)
 		}
 	} break;
 	case VIRTIO_MMIO_QUEUE_READY: {
+	        printk("W VIRTIO_MMIO_QUEUE_READY\n    ioreq->data: %lld\n", r->data);
 		const uint16_t queue_sel = atomic_get(&data->be.queue_sel);
 		const uint16_t queue_id = queue_sel;
 
@@ -860,6 +902,7 @@ static void ioreq_server_write_req(const struct device *dev, struct ioreq *r)
 		}
 	} break;
 	case VIRTIO_MMIO_QUEUE_SEL: {
+	        printk("W VIRTIO_MMIO_QUEUE_SEL\n    ioreqp->data: %lld\n", r->data);
 		atomic_set(&data->be.queue_sel, r->data);
 	} break;
 	default:
@@ -869,6 +912,7 @@ static void ioreq_server_write_req(const struct device *dev, struct ioreq *r)
 
 static void ioreq_server_cb(void *ptr)
 {
+        printk("FUNC: ioreq_server_cb\n");	
 	const struct device *dev = ptr;
 	struct vhost_xen_mmio_data *data = dev->data;
 	struct ioreq *r = &data->shared_iopage->vcpu_ioreq[0];
@@ -893,6 +937,7 @@ static void bind_interdomain_nop(void *priv)
 
 static void xs_notify_handler(const char *path, const char *token, void *param)
 {
+        printk("FUNC: xs_notify_handler\n");	
 	const struct device *dev = param;
 	struct vhost_xen_mmio_data *data = dev->data;
 
@@ -903,6 +948,7 @@ static void xs_notify_handler(const char *path, const char *token, void *param)
 
 static void isr_workhandler(struct k_work *work)
 {
+        printk("FUNC: isr_workhandler\n");
 	const struct k_work_delayable *delayable = k_work_delayable_from_work(work);
 	struct vhost_xen_mmio_data *data =
 		CONTAINER_OF(delayable, struct vhost_xen_mmio_data, isr_work);
@@ -920,6 +966,7 @@ static void isr_workhandler(struct k_work *work)
 
 static void ready_workhandler(struct k_work *work)
 {
+        printk("FUNC: ready_workhandler\n");	
 	const struct k_work_delayable *delayable = k_work_delayable_from_work(work);
 	struct vhost_xen_mmio_data *data =
 		CONTAINER_OF(delayable, struct vhost_xen_mmio_data, ready_work);
@@ -938,6 +985,7 @@ static void ready_workhandler(struct k_work *work)
 
 static void init_workhandler(struct k_work *work)
 {
+        printk("FUNC: init_worklahandler\n");
 	struct k_work_delayable *delayable = k_work_delayable_from_work(work);
 	struct vhost_xen_mmio_data *data =
 		CONTAINER_OF(delayable, struct vhost_xen_mmio_data, init_work);
@@ -1057,6 +1105,7 @@ retry:
 
 static bool vhost_xen_mmio_virtq_is_ready(const struct device *dev, uint16_t queue_id)
 {
+        printk("FUNC: vhost_xen_mmio_virtq_is_ready\n");	
 	const struct vhost_xen_mmio_config *config = dev->config;
 	const struct vhost_xen_mmio_data *data = dev->data;
 	const struct virtq_context *vq_ctx = &data->vq_ctx[queue_id];
@@ -1097,6 +1146,7 @@ static bool vhost_xen_mmio_virtq_is_ready(const struct device *dev, uint16_t que
 static int vhost_xen_mmio_get_virtq(const struct device *dev, uint16_t queue_id, void **parts,
 				    size_t *queue_size)
 {
+        printk("FUNC: vhost_xen_mmio_et_virtq\n");	
 	const struct vhost_xen_mmio_config *config = dev->config;
 	const struct vhost_xen_mmio_data *data = dev->data;
 	const struct virtq_context *vq_ctx = &data->vq_ctx[queue_id];
@@ -1136,15 +1186,17 @@ static int vhost_xen_mmio_get_virtq(const struct device *dev, uint16_t queue_id,
 
 static int vhost_xen_mmio_get_driver_features(const struct device *dev, uint64_t *drv_feats)
 {
+        printk("FUNC: vhost_xen_mmio_get_driver_features\n");
 	const struct vhost_xen_mmio_data *data = dev->data;
 
 	*drv_feats = data->be.driver_features;
-
+        printk("    driver_features: %lld", *drv_feats);
 	return 0;
 }
 
 static int vhost_xen_mmio_notify_virtq(const struct device *dev, uint16_t queue_id)
 {
+        printk("FUNC: vhost_xen_mmio_notify_virtq\n");	
 	const struct vhost_xen_mmio_config *config = dev->config;
 	struct vhost_xen_mmio_data *data = dev->data;
 
@@ -1163,6 +1215,7 @@ static int vhost_xen_mmio_notify_virtq(const struct device *dev, uint16_t queue_
 
 static int vhost_xen_mmio_set_device_status(const struct device *dev, uint32_t status)
 {
+	printk("FUNC: vhost_xen_mmio_set_device_status\n");
 	struct vhost_xen_mmio_data *data = dev->data;
 
 	if (!data) {
@@ -1180,6 +1233,7 @@ static int vhost_xen_mmio_set_device_status(const struct device *dev, uint32_t s
 
 static int vhost_xen_mmio_release_iovec(const struct device *dev, uint16_t queue_id, uint16_t head)
 {
+	printk("FUNC: vhost_xen_mmio_release_iovec\n");
 	const struct vhost_xen_mmio_config *config = dev->config;
 	struct vhost_xen_mmio_data *data = dev->data;
 	struct virtq_context *vq_ctx = &data->vq_ctx[queue_id];
@@ -1242,6 +1296,7 @@ static int vhost_xen_mmio_prepare_iovec(const struct device *dev, uint16_t queue
 					struct vhost_iovec *w_iovecs, size_t w_iovecs_count,
 					size_t *read_count, size_t *write_count)
 {
+	printk("FUNC: vhost_xen_mmio_prepare_iovec\n");
 	const struct vhost_xen_mmio_config *config = dev->config;
 	struct vhost_xen_mmio_data *data = dev->data;
 	struct virtq_context *vq_ctx = &data->vq_ctx[queue_id];
@@ -1314,6 +1369,7 @@ static int vhost_xen_mmio_register_virtq_ready_cb(const struct device *dev,
 								   void *user_data),
 						  void *user_data)
 {
+	printk("FUNC: vhost_xen_mmio_register_virtq_ready_cb\n");
 	const struct vhost_xen_mmio_config *config = dev->config;
 	struct vhost_xen_mmio_data *data = dev->data;
 
@@ -1335,6 +1391,7 @@ static int vhost_xen_mmio_register_virtq_notify_cb(const struct device *dev, uin
 								    void *user_data),
 						   void *user_data)
 {
+	printk("FUNC: vhost_xen_mmio_register_virtq_notify_cb\n");
 	const struct vhost_xen_mmio_config *config = dev->config;
 	struct vhost_xen_mmio_data *data = dev->data;
 	struct virtq_context *vq_ctx = &data->vq_ctx[queue_id];
@@ -1368,6 +1425,7 @@ static const struct vhost_controller_api vhost_driver_xen_mmio_api = {
 
 static int vhost_xen_mmio_init(const struct device *dev)
 {
+	printk("FUNC: vhost_xen_mmio_init\n");
 	const struct k_work_queue_config qcfg = {.name = "vhost-mmio-wq"};
 	const struct vhost_xen_mmio_config *config = dev->config;
 	struct vhost_xen_mmio_data *data = dev->data;
@@ -1431,7 +1489,7 @@ static int vhost_xen_mmio_init(const struct device *dev)
 		.workq_stack = (k_thread_stack_t *)&workq_stack_##idx,                             \
 		.workq_stack_size = K_THREAD_STACK_SIZEOF(workq_stack_##idx),                      \
 		.workq_priority = DT_INST_PROP_OR(idx, priority, 0),                               \
-		.device_features = BIT(VIRTIO_F_VERSION_1) | BIT(VIRTIO_F_ACCESS_PLATFORM),        \
+		.device_features = BIT(VIRTIO_F_VERSION_1) | BIT(VIRTIO_F_ACCESS_PLATFORM)|BIT(VIRTIO_F_IN_ORDER),        \
 	};                                                                                         \
 	struct mapped_pages_chunk vhost_xen_mmio_pages_chunks_##idx[Q_NUM(idx)]                    \
 								   [Q_SZ_MAX(idx) + 1];            \

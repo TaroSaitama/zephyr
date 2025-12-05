@@ -65,6 +65,8 @@
 /** Indicates device needs platform-specific handling. */
 #define VIRTIO_F_ACCESS_PLATFORM    33
 
+#define VIRTIO_F_IN_ORDER           35
+
 /** @} */
 
 /**
@@ -218,6 +220,8 @@
 #define VIRTIO_MMIO_CONFIG_GENERATION   0x0fc
 /** Base offset of the device configuration structure. */
 #define VIRTIO_MMIO_CONFIG              0x100
+
+#define VIRTIO_GPIO_CONFIG              0x104
 
 /** @} */
 

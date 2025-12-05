@@ -1,4 +1,4 @@
-/*
+  samples/drivers/virtualization/vhost/boards/xenvm.overlay/*
  * Copyright (c) 2025 TOKITA Hiroshi
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -14,6 +14,14 @@
 			queue-size-max= <16>;
 			base = <0x2000000>;
 		};
+        gpio {
+            compatible = "xen,vhost-mmio";
+            device-id = <41>;
+            vendor-id = <0x7a707972>; /* "zphy" */
+            num-queues = <2>;
+            queue-size-max= <16>;
+            base = <0x2000000>;
+        }
 	};
 
 	chosen {
