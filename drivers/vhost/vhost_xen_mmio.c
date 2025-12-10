@@ -764,11 +764,12 @@ static void ioreq_server_read_req(const struct device *dev, struct ioreq *r)
 	} break;
 	case VIRTIO_GPIO_CONFIG: {
 		printk("R VIRTIO_GPIO_CONFIG\n    addr_offset: %#lx\n", addr_offset);
+		r->data = 0;		
 		printk("    r->data: %lld\n", r->data);
-		r->data = -1;	
 	} break;
 	case VIRTIO_MMIO_CONFIG: {
 		printk("R VIRTIO_MMIO_CONFIG\n    addr_offset: %#lx\n", addr_offset);
+		r->data = 8;		
 		printk("    r->data: %lld\n", r->data);	
 	} break;
 	default: {
