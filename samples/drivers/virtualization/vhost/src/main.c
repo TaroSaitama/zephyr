@@ -64,6 +64,8 @@ struct virtio_gpio_response {
 };
 struct vringh vrh_inst;
 
+uint8_t line_status = 1;
+
 static void vringh_kick_handler(struct vringh *vrh)
 {
 	LOG_DBG("%s: queue_id=%lu", __func__, vrh->queue_id);
@@ -77,18 +79,16 @@ static void vringh_kick_handler(struct vringh *vrh)
 			return;
 		}
 		
-		printk("Get a descriptor\n");
-                printk("    riov.used: %d\n", riov.used);
-                printk("    wiov.used: %d\n", wiov.used);
+		printk("Get a descriptor, riov.used: %d, riov.used: %d\n", riov.used, wiov.used);
                 
 		if (riov.used == 0) {
 		} else {
 		    printk("    riov.iov[0].iov_base: %p\n", riov.iov[0].iov_base);
                     printk("    riov.iov[0].iov_len: %u\n", riov.iov[0].iov_len);
                     LOG_HEXDUMP_INF(riov.iov[0].iov_base, riov.iov[0].iov_len, "riov.iov[0]");
+		    
                 
-		    printk("    head: %d\n", head);
-                    printk("    ret=%d\n", ret);
+		    printk("    head: %d, ret: %d\n", head, ret);
 		}
 
 		if (ret == 0) 
@@ -104,7 +104,7 @@ static void vringh_kick_handler(struct vringh *vrh)
 
 
 
-		struct virtio_gpio_response res;
+		struct virtio_gpio_response res = { 0 };
 
 		ret = 0;		
 		switch (req.type) {
@@ -120,12 +120,14 @@ static void vringh_kick_handler(struct vringh *vrh)
 					res.status = VIRTIO_GPIO_STATUS_ERR;
 				} else {
 					res.status = VIRTIO_GPIO_STATUS_OK;
-					res.value = 0; // 0, 1, or 2
+					//res.value = 0; // 0, 1, or 2
+					res.value = line_status;
 				}
 			} break;
 			case VIRTIO_GPIO_MSG_SET_DIRECTION: {
 				uint8_t line = req.gpio;
 				uint8_t direct = req.value;
+				line_status = direct;
                                 // function to set direction
 				res.value = 0;
 				if (ret < 0) {
@@ -168,7 +170,6 @@ static void vringh_kick_handler(struct vringh *vrh)
 	        // wirite response to memory
                 uint8_t *dst = wiov.iov[0].iov_base;
 		uint16_t val_to_write = (uint16_t) res.status << 8 | res.value;
-		printk("Write at %p\n", dst);
 		LOG_HEXDUMP_INF(wiov.iov[0].iov_base, wiov.iov[0].iov_len, "wiov.iov[0]");
 		sys_write16(val_to_write, (mem_addr_t)dst);
 
