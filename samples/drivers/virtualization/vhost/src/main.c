@@ -72,132 +72,109 @@ static void vringh_kick_handler(struct vringh *vrh)
 	uint16_t head;
 
 	while (true) {
-		int ret = vringh_getdesc(vrh, &riov, &wiov, &head);
-
+		int ret = vringh_getdesc(vrh, &riov, &wiov, &head);	
+		printk("Get a descriptor, riov.used: %d, riov.used: %d\n", riov.used, wiov.used);
+		
 		if (ret < 0) {
 			LOG_ERR("vringh_getdesc failed: %d", ret);
 			return;
 		}
-		
-		printk("Get a descriptor, riov.used: %d, riov.used: %d\n", riov.used, wiov.used);
-                
-		if (riov.used == 0) {
-		} else {
-		    printk("    riov.iov[0].iov_base: %p\n", riov.iov[0].iov_base);
-                    printk("    riov.iov[0].iov_len: %u\n", riov.iov[0].iov_len);
-                    LOG_HEXDUMP_INF(riov.iov[0].iov_base, riov.iov[0].iov_len, "riov.iov[0]");
-		    
-                
-		    printk("    head: %d, ret: %d\n", head, ret);
-		}
 
 		if (ret == 0) 
 		{
+			printk("Exit 0\n");
 			return;
 		}
-		
-		struct virtio_gpio_request req;
-		mem_addr_t addr_base = (mem_addr_t) riov.iov[0].iov_base;
-		req.type  = sys_read16(addr_base+0);
-		req.gpio  = sys_read16(addr_base+2);
-		req.value = sys_read32(addr_base+4);
+		printk("riov.used: %d\n", riov.used);			
+	        for (uint32_t s = 0; s < riov.used; s++) {		
+			printk("    riov.iov[0].iov_base: %p\n", riov.iov[s].iov_base);
+		        printk("    riov.iov[0].iov_len: %u\n", riov.iov[s].iov_len);
+		        LOG_HEXDUMP_INF(riov.iov[0].iov_base, riov.iov[s].iov_len, "riov.iov[0]");
+			struct virtio_gpio_request req;
+			mem_addr_t addr_base = (mem_addr_t) riov.iov[s].iov_base;
+			req.type  = sys_read16(addr_base+0);
+			req.gpio  = sys_read16(addr_base+2);
+			req.value = sys_read32(addr_base+4);
 
+			struct virtio_gpio_response res = { 0 };
 
-
-		struct virtio_gpio_response res = { 0 };
-
-		ret = 0;		
-		switch (req.type) {
-			case VIRTIO_GPIO_MSG_GET_LINE_NAMES: {
-				printk("VIRTIO_GPIO_MSG_GET_LINENAME is not implemented\n");
-			} break;
-			case VIRTIO_GPIO_MSG_GET_DIRECTION: {
-				uint8_t line = req.gpio;
-				// Get direction
-				// func	
-				if (ret < 0) {
-			        	printk("failed to get direction\n");
-					res.status = VIRTIO_GPIO_STATUS_ERR;
-				} else {
-					res.status = VIRTIO_GPIO_STATUS_OK;
-					//res.value = 0; // 0, 1, or 2
-					res.value = line_status;
-				}
-			} break;
-			case VIRTIO_GPIO_MSG_SET_DIRECTION: {
-				uint8_t line = req.gpio;
-				uint8_t direct = req.value;
-				line_status = direct;
-                                // function to set direction
-				res.value = 0;
-				if (ret < 0) {
-			        	printk("failed to set direction\n");
-					res.status = VIRTIO_GPIO_STATUS_ERR;
-				} else {
-					printk("succeeded to set direction\n");
-					res.status = VIRTIO_GPIO_STATUS_OK;
-				}
-			} break;
-			case VIRTIO_GPIO_MSG_GET_VALUE: {
-				uint8_t line = req.gpio;
-                                // function to get direction
-				if (ret < 0) {
-			        	printk("failed to get value\n");
-					res.status = VIRTIO_GPIO_STATUS_ERR;
-				} else {
-					printk("succeeded to get value\n");
-					res.status = VIRTIO_GPIO_STATUS_OK;
-					res.value = 0; // 0 or 1 depending on value of GPIO
-				}	
-			} break;
-			case VIRTIO_GPIO_MSG_SET_VALUE: {
-				uint8_t line = req.gpio;
-				uint8_t value = req.value;
-                                // function to get direction
-				res.value = 0;
-				if (ret < 0) {
-			        	printk("failed to set value\n");
-					res.status = VIRTIO_GPIO_STATUS_ERR;
-				} else {
-					printk("succeeded to set value\n");
-					res.status = VIRTIO_GPIO_STATUS_OK;
-				}				
-			} break;
-			case VIRTIO_GPIO_MSG_SET_IRQ_TYPE: {
-				printk("VIRTIO_GPIO_MSG_SET_IRQ_TYPE is not implemented\n");					   
-			} break;
-		}
-	        // wirite response to memory
-                uint8_t *dst = wiov.iov[0].iov_base;
-		uint16_t val_to_write = (uint16_t) res.status << 8 | res.value;
-		LOG_HEXDUMP_INF(wiov.iov[0].iov_base, wiov.iov[0].iov_len, "wiov.iov[0]");
-		sys_write16(val_to_write, (mem_addr_t)dst);
-
-		/*
-		for (uint32_t s = 0; s < wiov.used; s++) {
+			ret = 0;		
+			switch (req.type) {
+				case VIRTIO_GPIO_MSG_GET_LINE_NAMES: {
+					printk("VIRTIO_GPIO_MSG_GET_LINENAME is not implemented\n");
+				} break;
+				case VIRTIO_GPIO_MSG_GET_DIRECTION: {
+					uint8_t line = req.gpio;
+					// Get direction
+					// func	
+					if (ret < 0) {
+						printk("failed to get direction\n");
+						res.status = VIRTIO_GPIO_STATUS_ERR;
+					} else {
+						res.status = VIRTIO_GPIO_STATUS_OK;
+						//res.value = 0; // 0, 1, or 2
+						res.value = line_status;
+					}
+				} break;
+				case VIRTIO_GPIO_MSG_SET_DIRECTION: {
+					uint8_t line = req.gpio;
+					uint8_t direct = req.value;
+					line_status = direct;
+					// function to set direction
+					res.value = 0;
+					if (ret < 0) {
+						printk("failed to set direction\n");
+						res.status = VIRTIO_GPIO_STATUS_ERR;
+					} else {
+						printk("succeeded to set direction\n");
+						res.status = VIRTIO_GPIO_STATUS_OK;
+					}
+				} break;
+				case VIRTIO_GPIO_MSG_GET_VALUE: {
+					uint8_t line = req.gpio;
+					// function to get direction
+					if (ret < 0) {
+						printk("failed to get value\n");
+						res.status = VIRTIO_GPIO_STATUS_ERR;
+					} else {
+						printk("succeeded to get value\n");
+						res.status = VIRTIO_GPIO_STATUS_OK;
+						res.value = 0; // 0 or 1 depending on value of GPIO
+					}	
+				} break;
+				case VIRTIO_GPIO_MSG_SET_VALUE: {
+					uint8_t line = req.gpio;
+					uint8_t value = req.value;
+					// function to get direction
+					res.value = 0;
+					if (ret < 0) {
+						printk("failed to set value\n");
+						res.status = VIRTIO_GPIO_STATUS_ERR;
+					} else {
+						printk("succeeded to set value\n");
+						res.status = VIRTIO_GPIO_STATUS_OK;
+					}				
+				} break;
+				case VIRTIO_GPIO_MSG_SET_IRQ_TYPE: {
+					printk("VIRTIO_GPIO_MSG_SET_IRQ_TYPE is not implemented\n");					   
+				} break;
+			}
+			// wirite response to memory
 			uint8_t *dst = wiov.iov[s].iov_base;
-			// uint32_t len = wiov.iov[s].iv_len;
-			uint16_t val_to_write = (uint16_t)res.status << 8 | res.value;
+			uint16_t val_to_write = (uint16_t) res.status << 8 | res.value;
+			LOG_HEXDUMP_INF(wiov.iov[s].iov_base, wiov.iov[s].iov_len, "wiov.iov[s]");
 			sys_write16(val_to_write, (mem_addr_t)dst);
-		        printk("Write at %p\n", dst);
-                        printk("    wiov.used: %d\n", wiov.used);
-		        printk("    wiov.iov[%d].iov_base: %p\n", s, wiov.iov[s].iov_base);
-                        printk("    wiov.iov[%d].iov_len: %u\n", s, wiov.iov[s].iov_len);
-		        LOG_HEXDUMP_INF(wiov.iov[0].iov_base, wiov.iov[s].iov_len, "wiov.iov[s]");
 		}
-		*/
-		
 		// osahou
 		barrier_dmem_fence_full();
 
-		uint32_t total_len = 0;
-
-		for (uint32_t i = 0; i < wiov.used; i++) {
-			total_len += wiov.iov[i].iov_len;
-		}
+                uint32_t total_len = 0;
+                for (uint32_t i = 0; i < wiov.used; i++) {
+                        total_len += wiov.iov[i].iov_len;
+                }
 
 		vringh_complete(vrh, head, total_len);
-                printk("Notify of completion\n");
+		printk("Notify of completion\n");
 
 		if (vringh_need_notify(vrh) > 0) {
 			vringh_notify(vrh);
