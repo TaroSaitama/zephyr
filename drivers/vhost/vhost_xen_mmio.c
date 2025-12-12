@@ -422,6 +422,7 @@ static int setup_iovec_mappings(struct mapped_pages *pages, domid_t domid,
 	size_t map_idx = 0;
 	int ret = 0;
 
+
 	for (size_t i = 0; i < bufs_len; i++) {
 		total_map_ops += (bufs[i].len + XEN_PAGE_SIZE - 1) / XEN_PAGE_SIZE;
 	}
@@ -449,7 +450,7 @@ static int setup_iovec_mappings(struct mapped_pages *pages, domid_t domid,
 
 			map_ops[map_idx].host_addr =
 				(uintptr_t)page_info->buf + (j * XEN_PAGE_SIZE);
-			map_ops[map_idx].flags = GNTMAP_host_map;
+			map_ops[map_idx].flags = GNTMAP_host_map | (bufs[i].is_write ? 0 : GNTMAP_readonly);
 			map_ops[map_idx].ref = (page_gpa & ~XEN_GRANT_ADDR_OFF) >> XEN_PAGE_SHIFT;
 			map_ops[map_idx].dom = domid;
 
@@ -769,7 +770,7 @@ static void ioreq_server_read_req(const struct device *dev, struct ioreq *r)
 	} break;
 	case VIRTIO_MMIO_CONFIG: {
 		printk("R VIRTIO_MMIO_CONFIG\n    addr_offset: %#lx\n", addr_offset);
-		r->data = 8;		
+		r->data = 12;		
 		printk("    r->data: %lld\n", r->data);	
 	} break;
 	default: {
