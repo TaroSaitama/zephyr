@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#include <zephyr/dt-bindings/gpio/gpio.h>
 / {
 	vhost {
 		rng {
@@ -27,4 +28,24 @@
 	chosen {
 		zephyr,shell-uart = &xen_hvc;
 	};
+        aliases {
+		led0 = &gpio_emul_led;	
+	};
+	
+	gpio_emul_0: gpio_emul_0 {
+            compatible = "zephyr,gpio-emul";
+	    gpio-controller;
+            status = "okay";
+            #gpio-cells = <2>;
+            ngpios = <8>;
+            rising-edge;
+            falling-edge;
+            high-level;
+	};
+	leds {
+            compatible = "gpio-leds";
+            gpio_emul_led: led {
+                gpios = <&gpio_emul_0 1 GPIO_ACTIVE_LOW>;
+          };
+        };
 };

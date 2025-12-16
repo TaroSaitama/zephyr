@@ -7,6 +7,7 @@
 #include <zephyr/drivers/vhost.h>
 #include <zephyr/drivers/vhost/vringh.h>
 #include <zephyr/logging/log.h>
+#include <zephyr/drivers/gpio.h>
 
 /* Possible values of the status field */ 
 #define VIRTIO_GPIO_STATUS_OK                   0x0 
@@ -33,6 +34,7 @@
 #define VIRTIO_GPIO_IRQ_TYPE_LEVEL_HIGH         0x04 
 #define VIRTIO_GPIO_IRQ_TYPE_LEVEL_LOW          0x08
 
+#define GPIO_EMUL_0_NODE DT_NODELABEL(gpio_emul_0)
 
 LOG_MODULE_REGISTER(vhost);
 
@@ -88,8 +90,8 @@ static void vringh_kick_handler(struct vringh *vrh)
 		printk("riov.used: %d\n", riov.used);			
 	        for (uint32_t s = 0; s < riov.used; s++) {		
 			printk("    riov.iov[0].iov_base: %p\n", riov.iov[s].iov_base);
-		        printk("    riov.iov[0].iov_len: %u\n", riov.iov[s].iov_len);
-		        LOG_HEXDUMP_INF(riov.iov[0].iov_base, riov.iov[s].iov_len, "riov.iov[0]");
+            printk("    riov.iov[0].iov_len: %u\n", riov.iov[s].iov_len);
+            LOG_HEXDUMP_INF(riov.iov[0].iov_base, riov.iov[s].iov_len, "riov.iov[0]");
 			struct virtio_gpio_request req;
 			mem_addr_t addr_base = (mem_addr_t) riov.iov[s].iov_base;
 			req.type  = sys_read16(addr_base+0);
@@ -98,22 +100,27 @@ static void vringh_kick_handler(struct vringh *vrh)
 
 			struct virtio_gpio_response res = { 0 };
 
+			struct device *dev = DEVICE_DT_GET(GPIO_EMUL_0_NODE);
 			ret = 0;		
 			switch (req.type) {
 				case VIRTIO_GPIO_MSG_GET_LINE_NAMES: {
 					printk("VIRTIO_GPIO_MSG_GET_LINENAME is not implemented\n");
 				} break;
 				case VIRTIO_GPIO_MSG_GET_DIRECTION: {
-					uint8_t line = req.gpio;
 					// Get direction
-					// func	
-					if (ret < 0) {
+					// Assume the states of input and output are mutually exclusive. 	
+                    printk("prev line of gpio_pin_is_out()\n");
+					ret = gpio_pin_is_output(dev, req.gpio);
+					int ret1 = gpio_pin_is_input(dev, req.gpio);
+                    printk("lataer line of gpio_pin_is_out()\n");
+					if ( ret < 0 || ret1 < 0) {
 						printk("failed to get direction\n");
 						res.status = VIRTIO_GPIO_STATUS_ERR;
 					} else {
+						printk("succeeded to get direction\n");
 						res.status = VIRTIO_GPIO_STATUS_OK;
-						//res.value = 0; // 0, 1, or 2
-						res.value = line_status;
+						if ( ret == 1 ) res.value = VIRTIO_GPIO_DIRECTION_OUT;
+						else res.value = VIRTIO_GPIO_DIRECTION_IN;
 					}
 				} break;
 				case VIRTIO_GPIO_MSG_SET_DIRECTION: {
@@ -121,6 +128,7 @@ static void vringh_kick_handler(struct vringh *vrh)
 					uint8_t direct = req.value;
 					line_status = direct;
 					// function to set direction
+                    ret = gpio_pin_set(dev, line, direct);
 					res.value = 0;
 					if (ret < 0) {
 						printk("failed to set direction\n");
@@ -132,20 +140,20 @@ static void vringh_kick_handler(struct vringh *vrh)
 				} break;
 				case VIRTIO_GPIO_MSG_GET_VALUE: {
 					uint8_t line = req.gpio;
-					// function to get direction
+                    ret = gpio_pin_get(dev, line);
 					if (ret < 0) {
 						printk("failed to get value\n");
 						res.status = VIRTIO_GPIO_STATUS_ERR;
 					} else {
 						printk("succeeded to get value\n");
 						res.status = VIRTIO_GPIO_STATUS_OK;
-						res.value = 0; // 0 or 1 depending on value of GPIO
+						res.value = ret; // 0 or 1 depending on value of GPIO
 					}	
 				} break;
 				case VIRTIO_GPIO_MSG_SET_VALUE: {
 					uint8_t line = req.gpio;
 					uint8_t value = req.value;
-					// function to get direction
+					ret = gpio_pin_set(dev, line, value);
 					res.value = 0;
 					if (ret < 0) {
 						printk("failed to set value\n");
@@ -160,10 +168,11 @@ static void vringh_kick_handler(struct vringh *vrh)
 				} break;
 			}
 			// wirite response to memory
-			uint8_t *dst = wiov.iov[s].iov_base;
-			uint16_t val_to_write = (uint16_t) res.status << 8 | res.value;
-			LOG_HEXDUMP_INF(wiov.iov[s].iov_base, wiov.iov[s].iov_len, "wiov.iov[s]");
-			sys_write16(val_to_write, (mem_addr_t)dst);
+			addr_base = (mem_addr_t) wiov.iov[s].iov_base;
+            sys_write8(res.status, addr_base+0);
+            sys_write8(res.value, addr_base+1);
+
+
 		}
 		// osahou
 		barrier_dmem_fence_full();
