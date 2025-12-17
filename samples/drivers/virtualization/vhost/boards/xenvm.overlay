@@ -7,14 +7,14 @@
 #include <zephyr/dt-bindings/gpio/gpio.h>
 / {
 	vhost {
-		rng {
-			compatible = "xen,vhost-mmio";
-			device-id = <4>;
-			vendor-id = <0x7a707972>; /* "zphy" */
-			num-queues = <2>;
-			queue-size-max= <16>;
-			base = <0x2000000>;
-		};
+	    //rng {
+			//compatible = "xen,vhost-mmio";
+			//device-id = <4>;
+			//vendor-id = <0x7a707972>; /* "zphy" */
+			//num-queues = <2>;
+			//queue-size-max= <16>;
+			//base = <0x2000000>;
+		//};
         gpio {
             compatible = "xen,vhost-mmio";
             device-id = <41>;
@@ -22,13 +22,14 @@
             num-queues = <2>;
             queue-size-max= <16>;
             base = <0x2000000>;
-        }
+        };
 	};
 
 	chosen {
 		zephyr,shell-uart = &xen_hvc;
 	};
-        aliases {
+
+    aliases {
 		led0 = &gpio_emul_led;	
 	};
 	
