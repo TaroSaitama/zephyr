@@ -1,4 +1,4 @@
-  samples/drivers/virtualization/vhost/boards/xenvm.overlay/*
+/*
  * Copyright (c) 2025 TOKITA Hiroshi
  *
  * SPDX-License-Identifier: Apache-2.0
