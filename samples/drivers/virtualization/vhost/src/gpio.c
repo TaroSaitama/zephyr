@@ -30,18 +30,33 @@
 
 #define GPIO_EMUL_0_NODE DT_NODELABEL(gpio_emul_0)
 
-LOG_MODULE_REGISTER(vhost);
+LOG_MODULE_REGISTER(vhost_gpio);
+
+static struct vhost_iovec riovec[16];
+static struct vhost_iovec wiovec[16];
+
+static struct vringh_iov riov = {
+    .iov = riovec,
+    .max_num = 16,
+};
+
+static struct vringh_iov wiov = {
+    .iov = wiovec,
+    .max_num = 16,
+};
 
 struct virtio_gpio_request {
         uint16_t type;
         uint16_t gpio;
         uint32_t value;
 };
+
 struct virtio_gpio_response {
         uint8_t status;
         uint8_t value;
 };
-struct vringh vrh_inst;
+
+static struct vringh vrh_inst;
 
 static void vringh_kick_handler(struct vringh *vrh)
 {
