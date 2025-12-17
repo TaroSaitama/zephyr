@@ -64,8 +64,6 @@ struct virtio_gpio_response {
 };
 struct vringh vrh_inst;
 
-uint8_t line_status = 1;
-
 static void vringh_kick_handler(struct vringh *vrh)
 {
 	LOG_DBG("%s: queue_id=%lu", __func__, vrh->queue_id);
@@ -73,7 +71,7 @@ static void vringh_kick_handler(struct vringh *vrh)
 
 	while (true) {
 		int ret = vringh_getdesc(vrh, &riov, &wiov, &head);
-		printk("Get a descriptor, riov.used: %d, riov.used: %d\n", riov.used, wiov.used);
+		//printk("Get a descriptor, riov.used: %d, riov.used: %d\n", riov.used, wiov.used);
 
 		if (ret < 0) {
 			LOG_ERR("vringh_getdesc failed: %d", ret);
@@ -86,81 +84,139 @@ static void vringh_kick_handler(struct vringh *vrh)
 		}
 		printk("riov.used: %d\n", riov.used);
 		for (uint32_t s = 0; s < riov.used; s++) {
-			printk("    riov.iov[0].iov_base: %p\n", riov.iov[s].iov_base);
-			printk("    riov.iov[0].iov_len: %u\n", riov.iov[s].iov_len);
-			LOG_HEXDUMP_INF(riov.iov[0].iov_base, riov.iov[s].iov_len, "riov.iov[0]");
 			struct virtio_gpio_request req;
+			struct virtio_gpio_response resp = {0};
+			struct device *dev = DEVICE_DT_GET(GPIO_EMUL_0_NODE);
+			//printk("    riov.iov[0].iov_base: %p\n", riov.iov[s].iov_base);
+			//printk("    riov.iov[0].iov_len: %u\n", riov.iov[s].iov_len);
+            // Read request
+			LOG_HEXDUMP_INF(riov.iov[0].iov_base, riov.iov[s].iov_len, "riov.iov[0]");
 			mem_addr_t addr_base = (mem_addr_t)riov.iov[s].iov_base;
 			req.type = sys_read16(addr_base + 0);
 			req.gpio = sys_read16(addr_base + 2);
 			req.value = sys_read32(addr_base + 4);
 
-			struct virtio_gpio_response res = {0};
-
-			struct device *dev = DEVICE_DT_GET(GPIO_EMUL_0_NODE);
+            // Case-by-case handling based on request type
 			ret = 0;
 			switch (req.type) {
 			case VIRTIO_GPIO_MSG_GET_LINE_NAMES: {
 				printk("VIRTIO_GPIO_MSG_GET_LINENAME is not implemented\n");
 			} break;
 			case VIRTIO_GPIO_MSG_GET_DIRECTION: {
+                gpio_flags_t flags = 0;
+                ret = gpio_pin_get_config(dev, req.gpio, &flags);
+ 				if (ret < 0) {
+					printk("failed to get direction\n");
+					resp.status = VIRTIO_GPIO_STATUS_ERR;
+                    resp.value = 0;
+				} else {
+                    flags &= (GPIO_OUTPUT | GPIO_INPUT);
+                    printk("Get direction: %d\n", flags);
+                    switch (flags) { // none, out, in
+                        case GPIO_DISCONNECTED: {
+                            resp.status = VIRTIO_GPIO_STATUS_OK;
+                            resp.value = VIRTIO_GPIO_DIRECTION_NONE;
+                        } break;
+                       case GPIO_OUTPUT: {
+                            resp.status = VIRTIO_GPIO_STATUS_OK;
+                            resp.value = VIRTIO_GPIO_DIRECTION_OUT;
+                        } break;
+                        case GPIO_INPUT: {
+                            resp.status = VIRTIO_GPIO_STATUS_OK;
+                            resp.value = VIRTIO_GPIO_DIRECTION_IN;
+                        } break;
+                        default: {
+                            resp.status = VIRTIO_GPIO_STATUS_ERR;
+                            resp.value = 0;
+                        } break;
+                    }
+                }
+
 				// Get direction
 				// Assume the states of input and output are mutually exclusive.
-				printk("prev line of gpio_pin_is_out()\n");
-				ret = gpio_pin_is_output(dev, req.gpio);
+                /*
 				int ret1 = gpio_pin_is_input(dev, req.gpio);
-				printk("lataer line of gpio_pin_is_out()\n");
+				ret = gpio_pin_is_output(dev, req.gpio);
+                printk("gpio_pin_is_output: %d\n", ret);
 				if (ret < 0 || ret1 < 0) {
 					printk("failed to get direction\n");
-					res.status = VIRTIO_GPIO_STATUS_ERR;
+					resp.status = VIRTIO_GPIO_STATUS_ERR;
+                    resp.value = 0;
 				} else {
-					printk("succeeded to get direction\n");
-					res.status = VIRTIO_GPIO_STATUS_OK;
-					if (ret == 1) {
-						res.value = VIRTIO_GPIO_DIRECTION_OUT;
+					//printk("succeeded to get direction\n");
+					if (ret != 0) {
+                        printk("return direction is out\n");
+                        resp.status = VIRTIO_GPIO_STATUS_OK;
+						resp.value = VIRTIO_GPIO_DIRECTION_OUT;
 					} else {
-						res.value = VIRTIO_GPIO_DIRECTION_IN;
+                        printk("return direction is in\n");
+                        resp.status = VIRTIO_GPIO_STATUS_OK;
+						resp.value = VIRTIO_GPIO_DIRECTION_IN;
 					}
 				}
+                */
 			} break;
 			case VIRTIO_GPIO_MSG_SET_DIRECTION: {
-				uint8_t line = req.gpio;
-				uint8_t direct = req.value;
-				line_status = direct;
 				// function to set direction
-				ret = gpio_pin_set(dev, line, direct);
-				res.value = 0;
+                gpio_flags_t flags = 0;
+                ret = gpio_pin_get_config(dev, req.gpio, &flags);
 				if (ret < 0) {
 					printk("failed to set direction\n");
-					res.status = VIRTIO_GPIO_STATUS_ERR;
+					resp.status = VIRTIO_GPIO_STATUS_ERR;
+                    resp.value = 0;
 				} else {
-					printk("succeeded to set direction\n");
-					res.status = VIRTIO_GPIO_STATUS_OK;
-				}
+                    printk("Read pin status: %x\n", flags);
+                    // Lower bits of GPIO_OUTPUT and GPIO_INPUT 
+                    gpio_flags_t mask = GPIO_OUTPUT | GPIO_INPUT;
+                    flags &= ~(flags & mask);
+                    // Upper bits of GPIO_OUTPUT or GPIO_INPUT
+                    switch (req.value) { // none, out, in
+                        case VIRTIO_GPIO_DIRECTION_NONE: {
+                            printk("Set direction none (req.value): %d\n", req.value); 
+                            flags |= GPIO_DISCONNECTED;
+                        } break;
+                        case VIRTIO_GPIO_DIRECTION_OUT: {
+                            printk("Set direction out (req.value): %d\n", req.value); 
+                            flags |= GPIO_OUTPUT;
+                        } break;
+                        case VIRTIO_GPIO_DIRECTION_IN: {
+                            printk("Set direction in (req.value): %d\n", req.value);
+                            flags |= GPIO_INPUT;
+                        } break;
+                    }
+                    ret = gpio_pin_configure(dev, req.gpio, flags);
+                    if (ret < 0) {
+                        resp.status = VIRTIO_GPIO_STATUS_ERR;
+                        resp.value = 0;
+                    } else {
+                        resp.status = VIRTIO_GPIO_STATUS_OK;
+                        resp.value = 0;
+                        printk("Write pin status: %x\n", flags);
+                    }
+                }
 			} break;
 			case VIRTIO_GPIO_MSG_GET_VALUE: {
-				uint8_t line = req.gpio;
-				ret = gpio_pin_get(dev, line);
+				ret = gpio_pin_get(dev, req.gpio);
 				if (ret < 0) {
 					printk("failed to get value\n");
-					res.status = VIRTIO_GPIO_STATUS_ERR;
+					resp.status = VIRTIO_GPIO_STATUS_ERR;
+                    resp.value = 0;
 				} else {
 					printk("succeeded to get value\n");
-					res.status = VIRTIO_GPIO_STATUS_OK;
-					res.value = ret; // 0 or 1 depending on value of GPIO
+					resp.status = VIRTIO_GPIO_STATUS_OK;
+					resp.value = ret; // 0 or 1 depending on value of GPIO
 				}
 			} break;
 			case VIRTIO_GPIO_MSG_SET_VALUE: {
-				uint8_t line = req.gpio;
-				uint8_t value = req.value;
-				ret = gpio_pin_set(dev, line, value);
-				res.value = 0;
+				ret = gpio_pin_set(dev, req.gpio, req.value);
 				if (ret < 0) {
 					printk("failed to set value\n");
-					res.status = VIRTIO_GPIO_STATUS_ERR;
+					resp.status = VIRTIO_GPIO_STATUS_ERR;
+                    resp.value = 0;
 				} else {
 					printk("succeeded to set value\n");
-					res.status = VIRTIO_GPIO_STATUS_OK;
+					resp.status = VIRTIO_GPIO_STATUS_OK;
+                    resp.value = 0;
 				}
 			} break;
 			case VIRTIO_GPIO_MSG_SET_IRQ_TYPE: {
@@ -169,8 +225,8 @@ static void vringh_kick_handler(struct vringh *vrh)
 			}
 			// wirite response to memory
 			addr_base = (mem_addr_t)wiov.iov[s].iov_base;
-			sys_write8(res.status, addr_base + 0);
-			sys_write8(res.value, addr_base + 1);
+			sys_write8(resp.status, addr_base + 0);
+			sys_write8(resp.value, addr_base + 1);
 		}
 		// osahou
 		barrier_dmem_fence_full();
