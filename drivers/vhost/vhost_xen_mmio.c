@@ -60,6 +60,8 @@ LOG_MODULE_REGISTER(xen_vhost_mmio);
 
 #define META_PAGES_INDEX(cfg) (cfg->queue_size_max)
 
+#define GPIO0_NODE DT_NODELABEL(gpio0)
+
 enum virtq_parts {
 	VIRTQ_DESC = 0,
 	VIRTQ_AVAIL,
@@ -746,7 +748,7 @@ static void ioreq_server_read_req(const struct device *dev, struct ioreq *r)
 		r->data = 0;		
 	} break;
 	case VIRTIO_MMIO_CONFIG: {
-		r->data = 12;		
+		r->data = DT_PROP(GPIO0_NODE, ngpios);
 	} break;
 	default: {
 		r->data = -1;
@@ -1145,7 +1147,7 @@ static int vhost_xen_mmio_get_driver_features(const struct device *dev, uint64_t
 	const struct vhost_xen_mmio_data *data = dev->data;
 
 	*drv_feats = data->be.driver_features;
-    
+
 	return 0;
 }
 
@@ -1437,7 +1439,7 @@ static int vhost_xen_mmio_init(const struct device *dev)
 		.workq_stack = (k_thread_stack_t *)&workq_stack_##idx,                             \
 		.workq_stack_size = K_THREAD_STACK_SIZEOF(workq_stack_##idx),                      \
 		.workq_priority = DT_INST_PROP_OR(idx, priority, 0),                               \
-		.device_features = BIT(VIRTIO_F_VERSION_1) | BIT(VIRTIO_F_ACCESS_PLATFORM)|BIT(VIRTIO_F_IN_ORDER),        \
+		.device_features = BIT(VIRTIO_F_VERSION_1) | BIT(VIRTIO_F_ACCESS_PLATFORM),        \
 	};                                                                                         \
 	struct mapped_pages_chunk vhost_xen_mmio_pages_chunks_##idx[Q_NUM(idx)]                    \
 								   [Q_SZ_MAX(idx) + 1];            \

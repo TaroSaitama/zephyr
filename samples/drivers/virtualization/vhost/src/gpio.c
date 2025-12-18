@@ -28,7 +28,7 @@
 #define VIRTIO_GPIO_IRQ_TYPE_LEVEL_HIGH   0x04
 #define VIRTIO_GPIO_IRQ_TYPE_LEVEL_LOW    0x08
 
-#define GPIO_EMUL_0_NODE DT_NODELABEL(gpio_emul_0)
+#define GPIO0_NODE DT_NODELABEL(gpio0)
 
 LOG_MODULE_REGISTER(vhost_gpio);
 
@@ -80,7 +80,7 @@ static void vringh_kick_handler(struct vringh *vrh)
                 for (uint32_t s = 0; s < riov.used; s++) {
                         struct virtio_gpio_request req;
                         struct virtio_gpio_response resp = {0};
-                        struct device *dev = DEVICE_DT_GET(GPIO_EMUL_0_NODE);
+                        struct device *dev = DEVICE_DT_GET(GPIO0_NODE);
 
                         // printk("    riov.iov[0].iov_base: %p\n", riov.iov[s].iov_base);
                         // printk("    riov.iov[0].iov_len: %u\n", riov.iov[s].iov_len);

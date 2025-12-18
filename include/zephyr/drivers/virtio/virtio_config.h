@@ -65,8 +65,6 @@
 /** Indicates device needs platform-specific handling. */
 #define VIRTIO_F_ACCESS_PLATFORM    33
 
-#define VIRTIO_F_IN_ORDER           35
-
 /** @} */
 
 /**
