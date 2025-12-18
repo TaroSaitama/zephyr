@@ -446,7 +446,8 @@ static int setup_iovec_mappings(struct mapped_pages *pages, domid_t domid,
 
 			map_ops[map_idx].host_addr =
 				(uintptr_t)page_info->buf + (j * XEN_PAGE_SIZE);
-			map_ops[map_idx].flags = GNTMAP_host_map | (bufs[i].is_write ? 0 : GNTMAP_readonly);
+			map_ops[map_idx].flags =
+				GNTMAP_host_map | (bufs[i].is_write ? 0 : GNTMAP_readonly);
 			map_ops[map_idx].ref = (page_gpa & ~XEN_GRANT_ADDR_OFF) >> XEN_PAGE_SHIFT;
 			map_ops[map_idx].dom = domid;
 
@@ -745,7 +746,7 @@ static void ioreq_server_read_req(const struct device *dev, struct ioreq *r)
 		r->data = vhost_queue_ready(dev, atomic_get(&data->be.queue_sel));
 	} break;
 	case VIRTIO_GPIO_CONFIG: {
-		r->data = 0;		
+		r->data = 0;
 	} break;
 	case VIRTIO_MMIO_CONFIG: {
 		r->data = DT_PROP(GPIO0_NODE, ngpios);
