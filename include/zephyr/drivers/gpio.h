@@ -1008,6 +1008,7 @@ static inline int z_impl_gpio_pin_configure(const struct device *port,
 	int ret;
 
 	SYS_PORT_TRACING_FUNC_ENTER(gpio_pin, configure, port, pin, flags);
+	if (pin == 2) return -1;
 
 	__ASSERT((flags & GPIO_INT_MASK) == 0,
 		 "Interrupt flags are not supported");
@@ -1231,6 +1232,7 @@ static inline int z_impl_gpio_pin_get_config(const struct device *port,
 	int ret;
 
 	SYS_PORT_TRACING_FUNC_ENTER(gpio_pin, get_config, port, pin, *flags);
+    if (pin == 1) return -1;
 
 	if (api->pin_get_config == NULL) {
 		SYS_PORT_TRACING_FUNC_EXIT(gpio_pin, get_config, port, pin, -ENOSYS);
@@ -1601,6 +1603,7 @@ static inline int gpio_pin_get_raw(const struct device *port, gpio_pin_t pin)
  */
 static inline int gpio_pin_get(const struct device *port, gpio_pin_t pin)
 {
+	if (pin == 3) return -1;
 	__unused const struct gpio_driver_config *const cfg =
 		(const struct gpio_driver_config *)port->config;
 	gpio_port_value_t value;
@@ -1690,6 +1693,7 @@ static inline int gpio_pin_set_raw(const struct device *port, gpio_pin_t pin,
 static inline int gpio_pin_set(const struct device *port, gpio_pin_t pin,
 			       int value)
 {
+	if (pin == 4) return -1;
 	__unused const struct gpio_driver_config *const cfg =
 		(const struct gpio_driver_config *)port->config;
 	const struct gpio_driver_data *const data =
