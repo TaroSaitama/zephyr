@@ -80,6 +80,8 @@ struct vhost_xen_mmio_config {
 	uint32_t vendor_id;
 	uintptr_t base;
 	size_t reg_size;
+	uint8_t *config_data;
+	size_t config_data_len;
 
 	uint64_t device_features;
 };
@@ -745,14 +747,15 @@ static void ioreq_server_read_req(const struct device *dev, struct ioreq *r)
 	case VIRTIO_MMIO_QUEUE_READY: {
 		r->data = vhost_queue_ready(dev, atomic_get(&data->be.queue_sel));
 	} break;
-	case VIRTIO_GPIO_CONFIG: {
-		r->data = 0;
-	} break;
-	case VIRTIO_MMIO_CONFIG: {
-		r->data = DT_PROP(GPIO0_NODE, ngpios);
-	} break;
 	default: {
-		r->data = -1;
+		const size_t config_offset = addr_offset - VIRTIO_MMIO_CONFIG;
+		// 4-byte alignment check and ??
+		if ((config_offset % 4) == 0 &&
+		    (config_offset < ROUND_DOWN(config->config_data_len, 4))) {
+			r->data = sys_read32((mem_addr_t)(config->config_data + config_offset));
+		} else {
+			r->data = -1;
+		}
 	} break;
 	}
 
@@ -1430,6 +1433,8 @@ static int vhost_xen_mmio_init(const struct device *dev)
 
 #define VHOST_XEN_MMIO_INST(idx)                                                                   \
 	static K_THREAD_STACK_DEFINE(workq_stack_##idx, DT_INST_PROP_OR(idx, stack_size, 4096));   \
+	uint8_t config_data##idx[] = {                                                                   \
+		DT_INST_FOREACH_PROP_ELEM_SEP(idx, config_data, DT_PROP_BY_IDX, (, ))};            \
 	static const struct vhost_xen_mmio_config vhost_xen_mmio_config_##idx = {                  \
 		.queue_size_max = DT_INST_PROP_OR(idx, queue_size_max, 1),                         \
 		.num_queues = DT_INST_PROP_OR(idx, num_queues, 1),                                 \
@@ -1437,6 +1442,8 @@ static int vhost_xen_mmio_init(const struct device *dev)
 		.vendor_id = DT_INST_PROP_OR(idx, vendor_id, 0),                                   \
 		.base = DT_INST_PROP(idx, base),                                                   \
 		.reg_size = XEN_PAGE_SIZE,                                                         \
+		.config_data = config_data##idx,                                                         \
+		.config_data_len = DT_INST_PROP_LEN(idx, config_data),                             \
 		.workq_stack = (k_thread_stack_t *)&workq_stack_##idx,                             \
 		.workq_stack_size = K_THREAD_STACK_SIZEOF(workq_stack_##idx),                      \
 		.workq_priority = DT_INST_PROP_OR(idx, priority, 0),                               \

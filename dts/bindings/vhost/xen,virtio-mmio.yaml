@@ -37,3 +37,8 @@ properties:
     type: int
     description: >
       Priority for the instance-specific work_q thread.
+  
+  config-data:
+    type: uint8-array
+    description: >
+      Configuretion data
