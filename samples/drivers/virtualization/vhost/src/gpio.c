@@ -56,7 +56,43 @@ struct virtio_gpio_response {
 	uint8_t value;
 };
 
+
 static struct vringh vrh_inst;
+
+static const uint8_t pin_names[] = {
+	CONFIG_GPIO0_NAME0 "\0"
+	CONFIG_GPIO0_NAME1 "\0"
+	CONFIG_GPIO0_NAME2 "\0"
+	CONFIG_GPIO0_NAME3 "\0"
+	CONFIG_GPIO0_NAME4 "\0"
+	CONFIG_GPIO0_NAME5 "\0"
+	CONFIG_GPIO0_NAME6 "\0"
+	CONFIG_GPIO0_NAME7 "\0"
+	CONFIG_GPIO0_NAME8 "\0"
+	CONFIG_GPIO0_NAME9 "\0"
+	CONFIG_GPIO0_NAME10 "\0"
+	CONFIG_GPIO0_NAME11 "\0"
+	CONFIG_GPIO0_NAME12 "\0"
+	CONFIG_GPIO0_NAME13 "\0"
+	CONFIG_GPIO0_NAME14 "\0"
+	CONFIG_GPIO0_NAME15 "\0"
+	CONFIG_GPIO0_NAME16 "\0"
+	CONFIG_GPIO0_NAME17 "\0"
+	CONFIG_GPIO0_NAME18 "\0"
+	CONFIG_GPIO0_NAME19 "\0"
+	CONFIG_GPIO0_NAME20 "\0"
+	CONFIG_GPIO0_NAME21 "\0"
+	CONFIG_GPIO0_NAME22 "\0"
+	CONFIG_GPIO0_NAME23 "\0"
+	CONFIG_GPIO0_NAME24 "\0"
+	CONFIG_GPIO0_NAME25 "\0"
+	CONFIG_GPIO0_NAME26 "\0"
+	CONFIG_GPIO0_NAME27 "\0"
+	CONFIG_GPIO0_NAME28 "\0"
+	CONFIG_GPIO0_NAME29 "\0"
+	CONFIG_GPIO0_NAME30 "\0"
+	CONFIG_GPIO0_NAME31 "\0"
+};
 
 static void vringh_kick_handler(struct vringh *vrh)
 {
@@ -95,8 +131,7 @@ static void vringh_kick_handler(struct vringh *vrh)
 			// Case-by-case handling based on request type
 			switch (req.type) {
 			case VIRTIO_GPIO_MSG_GET_LINE_NAMES:
-				LOG_ERR("VIRTIO_GPIO_MSG_GET_LINENAME is not implemented\n");
-				// resp.status = VIRTIO_GPIO_STATUS_ERR;
+				printk("GET_LINE_NAMES\n");
 				break;
 			case VIRTIO_GPIO_MSG_GET_DIRECTION:
 				ret = gpio_pin_get_config(dev, req.gpio, &flags);
@@ -213,8 +248,16 @@ static void vringh_kick_handler(struct vringh *vrh)
 			}
 			// wirite response to memory
 			addr_base = (mem_addr_t)wiov.iov[s].iov_base;
-			sys_write8(resp.status, addr_base + 0);
-			sys_write8(resp.value, addr_base + 1);
+			if (req.type == VIRTIO_GPIO_MSG_GET_LINE_NAMES) {
+				sys_write8(VIRTIO_GPIO_STATUS_OK, addr_base + 0);
+				for(int i = 0; i < ARRAY_SIZE(pin_names); i++) {
+					sys_write8(pin_names[i], addr_base + 1 + i);
+				}
+				LOG_HEXDUMP_INF(addr_base, 255 + 1, "resp_N"); // addr len string
+			} else {
+				sys_write8(resp.status, addr_base + 0);
+				sys_write8(resp.value, addr_base + 1);
+			}
 		}
 		// osahou
 		barrier_dmem_fence_full();
@@ -225,7 +268,7 @@ static void vringh_kick_handler(struct vringh *vrh)
 		}
 
 		vringh_complete(vrh, head, total_len);
-		printk("Notify of completion\n");
+		printk("Notify of completion %d\n", total_len);
 
 		if (vringh_need_notify(vrh) > 0) {
 			vringh_notify(vrh);

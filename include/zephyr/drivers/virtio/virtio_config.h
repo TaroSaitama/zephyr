@@ -219,8 +219,6 @@
 /** Base offset of the device configuration structure. */
 #define VIRTIO_MMIO_CONFIG              0x100
 
-#define VIRTIO_GPIO_CONFIG              0x104
-
 /** @} */
 
 #endif /* ZEPHYR_DRIVERS_VIRTIO_VIRTIO_CONFIG_H_ */
